@@ -130,7 +130,6 @@ class MainActivity : AppCompatActivity() {
             MenuItem("Home", "file:///android_asset/Project2024/ACT-HTML-JavaScript/ACT-Homepage.html"),
             MenuItem("Login", "file:///android_asset/Project2024/ACT-HTML-JavaScript/ACT-Login.html"),
             MenuItem("Register", "file:///android_asset/Project2024/ACT-HTML-JavaScript/ACT-Register.html"),
-            MenuItem("Portfolio", "file:///android_asset/Project2024/ACT-HTML-JavaScript/ACT-Portfolio.html"),
             MenuItem("Trade Ratings", "file:///android_asset/Project2024/ACT-HTML-JavaScript/ACT-Trade-Ratings.html"),
             MenuItem("Buy/Sell", "file:///android_asset/Project2024/ACT-HTML-JavaScript/ACT-Purchase.html"),
             MenuItem("News", "file:///android_asset/Project2024/ACT-HTML-JavaScript/ACT-Yahoo-News.html"),
