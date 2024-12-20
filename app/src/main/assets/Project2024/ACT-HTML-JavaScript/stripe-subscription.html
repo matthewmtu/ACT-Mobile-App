@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stripe Subscription with JWT Authentication</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+        }
+        button, input {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 10px;
+            border: none;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #6772e5;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #5469d4;
+        }
+        input {
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <h1>Stripe Subscription Test with JWT</h1>
+
+    <!-- Login Section -->
+    <h2>Step 1: Login</h2>
+    <input type="email" id="email" placeholder="Email" value="admin001@example.com">
+    <input type="password" id="password" placeholder="Password" value="password_123">
+    <button id="login-button">Login</button>
+
+    <h2>Step 2: Choose a Subscription Plan</h2>
+    <button id="monthly-plan" disabled>Subscribe Monthly</button>
+    <button id="yearly-plan" disabled>Subscribe Yearly</button>
+
+    <h2>Step 3: Check Subscription Status</h2>
+    <button id="check-status" disabled>Check Subscription Status</button>
+    <p id="subscription-status"></p>
+
+    <script>
+        const stripe = Stripe("pk_test_51QX6vSP9tIxdtAMKP8UKBr2mkqAWRrYN3C0WID3QuIJlBo4mY2l9YiPIvl5UDp8JndnvyujPoLAQX7AJPUKSTHMm00mtw7MvfX");
+        let accessToken = "";
+
+        // Step 1: Login and fetch JWT token
+        document.getElementById("login-button").addEventListener("click", async () => {
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+
+            try {
+                const response = await fetch("http://localhost:8000/api/token/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, password }), // Use email for login
+                });
+
+                if (!response.ok) throw new Error("Login failed. Check your credentials.");
+
+                const data = await response.json();
+                accessToken = data.access;
+
+                alert("Login successful! JWT token acquired.");
+                document.getElementById("monthly-plan").disabled = false;
+                document.getElementById("yearly-plan").disabled = false;
+                document.getElementById("check-status").disabled = false;
+            } catch (error) {
+                console.error("Error during login:", error.message);
+                alert("Failed to log in. Please try again.");
+            }
+        });
+
+        // Step 2: Create Stripe Checkout Session
+        document.getElementById("monthly-plan").addEventListener("click", () => {
+            createCheckoutSession("price_1QX8TOP9tIxdtAMKjWZcQIu6");
+        });
+
+        document.getElementById("yearly-plan").addEventListener("click", () => {
+            createCheckoutSession("price_1QX8UIP9tIxdtAMKPuZkIEnm");
+        });
+
+        async function createCheckoutSession(priceId) {
+            try {
+                const response = await fetch("http://localhost:8000/api/create-checkout-session/", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify({ price_id: priceId }),
+                });
+
+                const data = await response.json();
+
+                if (data.sessionId) {
+                    await stripe.redirectToCheckout({ sessionId: data.sessionId });
+                } else {
+                    console.error("Failed to create session:", data.error);
+                    alert("Failed to initiate payment. Please try again.");
+                }
+            } catch (error) {
+                console.error("Error:", error.message);
+                alert("Something went wrong! Please check the console.");
+            }
+        }
+
+        // Step 3: Check Subscription Status
+        document.getElementById("check-status").addEventListener("click", async () => {
+            try {
+                const response = await fetch("http://localhost:8000/api/subscription-status/", {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${accessToken}`
+                    },
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    const statusText = `Subscription Status: ${data.status || "Inactive"}`;
+                    const periodEnd = data.current_period_end
+                        ? new Date(data.current_period_end * 1000).toLocaleString()
+                        : "N/A";
+
+                    const planType = data.plan_name ? `${data.plan_name} (${data.interval})` : "Unknown Plan";
+
+                    document.getElementById("subscription-status").innerText = `
+                        ${statusText}, Plan: ${planType}, Next Renewal: ${periodEnd}
+                    `;
+                } else {
+                    document.getElementById("subscription-status").innerText = "No active subscription found.";
+                }
+            } catch (error) {
+                console.error("Error fetching subscription status:", error);
+                document.getElementById("subscription-status").innerText = "Failed to fetch subscription status.";
+            }
+        });
+    </script>
+</body>
+</html>
