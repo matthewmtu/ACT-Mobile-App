@@ -1,32 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <!-- Meta tag for character encoding -->
     <meta charset="UTF-8">
-    <!-- Meta tag for responsive design, ensures proper scaling on different devices -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Title of the webpage displayed in the browser tab -->
-    <title>ACT Web Application - Home</title>
+    <title>ACT Web Application - Fund Manager Dashboard</title>
     <link rel="icon" href="images/ACT-Logo.png" type="image/png" />
-    <!-- Displays the website logo in the page -->
+    <script src="ACT-Web.js" defer></script>
     <img src="images/ACT-Logo.png" alt="Website Logo" id="website-logo" width="150" height="150" style="display: block; margin: 0 auto;">
-    <!-- Link to the external CSS stylesheet for styling the webpage -->
     <link rel="stylesheet" href="css/ACT-Web-styles.css">
-    <script src="ACT-Web.js"></script>
-
-
 </head>
 
 <body>
-    <!-- Header section containing navigation links -->
     <header>
-        <!-- Logo for the application displayed -->
         <div class="logo">ACT Web Application</div>
     </header>
 
     <nav>
-        
-        <!-- Unordered list of navigation links -->
         <ul id="nav-links">
             <li><a href="ACT-Homepage.html">Home</a></li>
             <li><a href="ACT-Fund-Manager.html">Fund Manager Dashboard</a></li>
@@ -42,94 +32,38 @@
             <li><a href="ACT-Reports.html">Reports</a></li>
             <li><a href="ACT-Reviews.html">Review</a></li>
             <li><a href="ACT-Support.html">Support</a></li>
-            <li><a href="ACT-AI-Chatbot.html">AI Chatbot</a></li>
+            <li><a href="ACT-AI-Chatbot.html">AI Chatbot</a></li>    
         </ul>
-    </nav>
+   </nav>
 
-    <!-- Main section of the page displaying the fund manager dashboard -->
-    <section id="dashboard">
-        <!-- Title of the dashboard section -->
+   <section id="fund-manager">
         <h2>Fund Manager Dashboard</h2>
-        <!-- Image that visually represents the dashboard, with responsive scaling -->
         <img src="images/ACT-Fund-Manager.png" alt="ACT Fund Manager Dashboard Image" style="width: 100%; max-width: 600px; height: auto;">
-        
-        <!-- Container for search functionality and sorting options -->
-        <div class="search-filter">
-            <!-- Input field for searching clients -->
-            <input type="text" id="search-bar" placeholder="Search clients...">
-            <!-- Dropdown menu to allow sorting of client records -->
-            <label for="sort">Sort by:</label>
-            <select id="sort">
-                <option value="name">Name</option>
-                <option value="transaction-history">Transaction History</option>
-            </select>
+
+        <div class="search-bar">
+            <input type="text" id="search-input" placeholder="Search Clients, Stocks, or Cryptos" oninput="searchData()">
         </div>
 
-        <!-- Section for displaying client records in a table format -->
-        <div id="client-records" class="client-records-container">
-            <!-- Subtitle for the client records table -->
-            <h3>Client Records</h3>
-            <!-- Table to display client company, contact details, and transaction history -->
-            <table id="client-table">
-                <thead>
-                    <!-- Header row for the table -->
-                    <tr>
-                        <th>Client Company</th> <!-- Column header for client company names -->
-                        <th>Contact Details</th> <!-- Column header for client contact details -->
-                        <th>Transaction History</th> <!-- Column header for client transaction history -->
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Client records will be added dynamically within this body -->
-                </tbody>
-            </table>
+        <h3>Clients</h3>
+        <ul id="client-list">
+            <!-- Client list will be dynamically populated -->
+        </ul>
 
-            <!-- Section with buttons to download data in PDF or CSV format -->
-            <div class="download-buttons">
-                <button id="download-pdf">Download PDF</button> <!-- Button to download client data as PDF -->
-                <button id="download-csv">Download CSV</button> <!-- Button to download client data as CSV -->
-            </div>
-        </div>
+        <h3>Technology Stocks</h3>
+        <ul id="stock-list">
+            <!-- Tech stocks will be dynamically populated -->
+        </ul>
 
-        <!-- Modal popup for adding or editing client information -->
-        <div id="client-modal" class="modal">
-            <!-- Content area within the modal popup -->
-            <div class="modal-content">
-                <!-- Close button for the modal -->
-                <span class="close">&times;</span>
-                <!-- Title indicating whether the form is for adding or editing a client -->
-                <h3 id="modal-title">Add/Edit Client</h3>
-                <!-- Form for entering client details -->
-                <form id="client-form">
-                    <!-- Label and input field for entering the client company name -->
-                    <label for="client-name">Client Company Name:</label>
-                    <input type="text" id="client-name" name="client-name" required>
-
-                    <!-- Label and input field for entering contact details -->
-                    <label for="contact-details">Contact Details:</label>
-                    <input type="text" id="contact-details" name="contact-details" required>
-
-                    <!-- Label and textarea for entering the client transaction history -->
-                    <label for="transaction-history">Transaction History:</label>
-                    <textarea id="transaction-history" name="transaction-history" required></textarea>
-
-                    <!-- Submit button to save the client information -->
-                    <button type="submit">Save</button>
-                </form>
-            </div>
-        </div>
+        <h3>Cryptocurrencies</h3>
+        <ul id="crypto-list">
+            <!-- Cryptocurrencies will be dynamically populated -->
+        </ul>
     </section>
 
-    <!-- Footer section with copyright information -->
     <footer>
         <p>&copy; 2024 ACT Web Application. All Rights Reserved.</p>
     </footer>
 
-    <!-- Additional script for jsPDF functionality -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
-    
-    <!-- Links the JavaScript file for handling page interactions and client data -->
-    <script src="ACT-Web.js"></script>
 </body>
 
 </html>

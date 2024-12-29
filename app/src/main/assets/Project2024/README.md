@@ -414,60 +414,165 @@ You can access both the API and the Django Admin interface using this URL.
     ```
 
 #### Backend-Installation-Guide for local machine 
-To set up the backend of the ACT (Agentic Corporate Trader) project on your local machine, follow these steps:
-1. ***Clone the Repository***
-    ```bash
-    git clone https://github.com/your-repo/Project2024.git
-    cd Project2024/backend
-    ```
-2. ***Set Up Virtual Environment***
-    ```bash
-    # For Windows
-    python -m venv venv
 
-    # For Mac/Linux
-    python3 -m venv venv
-    ```
-3. ***Activate the virtual environment:***
-    ```bash
-    # For Windows
-    venv\Scripts\activate
+The ACT (Agentic Corporate Trader) backend uses Docker to streamline local development, ensuring consistent dependencies and an isolated runtime environment. This setup eliminates the need for manual installation of Python or additional libraries on the host machine.
 
-    # For Mac/Linux
-    source venv/bin/activate
-    ```
-4. ***Install Dependencies***
-    ```bash
-    pip install -r requirements.txt
-    ```
-5. ***Firebase Setup***
-    
-    The project uses Firebase as a database for specific assets and trade-related data. To integrate Firebase:
+1. **Docker Setup**
 
-    Go to the Firebase Console and download the Firebase Admin SDK credentials JSON file.
-    Place the downloaded JSON file in the config/ directory in the project root.
-    Ensure the path to the Firebase credentials file is correctly set in the settings.py file.
-    
-    Example path in settings.py:
-    ```python
-    FIREBASE_CREDENTIALS_PATH = os.path.join(BASE_DIR, 'config', 'your-firebase-key.json')
-    ```
-6. ***Database Setup***
-    For local development, the project uses SQLite. If you are starting fresh or have unapplied migrations, run the following commands to apply migrations:
-    ```bash
-    python manage.py makemigrations
-    python manage.py migrate
-    ```
-7. ***Create a Superuser***
-    To access the Django admin interface, you need to create a superuser:
-    ```bash
-    python manage.py createsuperuser
-    ```
-8. ***Running the Development Server***
-    ```bash
-    python manage.py runserver
-    ```
-    The backend will be available at http://127.0.0.1:8000/
+Make sure Docker and Docker Compose are installed on your system. Follow these command to build and run the backend:
+```bash
+docker-compose up --build
+```
+
+**Access the Application:**
+* `Base Url`: http://localhost:8000
+* `Admin panel`: http://localhost:8000/admin
+
+2. Docker Compose Configuration
+
+The provided docker-compose.yml file ensures that the Django backend is containerized and exposes port 8000 for local access. The configuration includes:
+```yaml
+services:
+  web:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=act_backend.settings
+```
+
+**Explanation:**
+
+* `web`: The main service running the Django backend.
+* `ports`: Maps the container's port 8000 to the host's port 8000, enabling access at http://localhost:8000.
+* `volumes`: Mounts the current project directory into the container for live updates.
+* `env_file`: Specifies .env for environment variables, centralizing sensitive data like secret keys and API credentials.
+* `environment`: Passes runtime variables to the Django application.
+
+3. **Dockerfile Configuration**
+
+The `Dockerfile` is optimized for a Python 3.11 environment and includes all necessary dependencies for the backend:
+
+```docerfile
+# Base image
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    libffi-dev \
+    libssl-dev \
+    && apt-get clean
+
+# Upgrade pip
+RUN pip install --upgrade pip
+
+# Set working directory and install Python dependencies
+WORKDIR /app
+COPY requirements.txt /app/
+RUN pip install -r requirements.txt
+
+# Copy the entire project code
+COPY . /app/
+
+# Expose port 8000 for the Django application
+EXPOSE 8000
+
+# Start the Django development server
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+```
+
+4. **Managing the Project with Docker**
+
+4.1. Apply Database Migrations
+
+Run migrations to initialize the SQLite database:
+```bash
+docker-compose exec web python manage.py migrate
+```
+
+4.2. Load Sample Data
+
+Populate both SQLite and Firebase with fixtures:
+```bash
+docker-compose exec web python manage.py load_fixtures
+```
+
+5. **Environment Variables**
+
+The `.env` file contains all configuration values required for the backend to run. An example `.env` file is provided below:
+```.env
+DJANGO_SECRET_KEY="your-django-secret-key"
+FIREBASE_CREDENTIALS_FILE="/path/to/your-firebase-key.json"
+RAPIDAPI_KEY="your-rapidapi-key"
+RAPIDAPI_HOST="your-rapidapi-host"
+ALPHA_VANTAGE_API_KEY="your-alpha-vantage-api-key"
+FINNHUB_API_KEY=""your-finnhub-api-key"
+STRIPE_SECRET_KEY="your-stripe-secret-key"
+STRIPE_PUBLISHABLE_KEY="your-stripe-publishable-key"
+FRONTEND_URL="https://chrisluddy.github.io/Project2024/"
+GEMINI_API_KEY="your-gemini-api-key"
+```
+
+6. **Notes:**
+
+* ``AI Integration:`` The AI libraries and models are managed within the container, ensuring compatibility across environments and reducing setup complexity.
+* ``Firebase Integration:`` Ensure that the Firebase Admin SDK JSON file is correctly placed in the config directory and referenced in the volumes section.
+* ``Live Code Changes:`` The volumes directive allows live code changes to reflect without rebuilding the container.
+* ``Environment Variables:`` The .env file centralizes environment-specific configuration, making the application portable across different environments.
+
+
+#### Tests
+
+The tests for this project are located in tests/tests.py. They are divided into three categories:
+
+1. CRUD Tests for Firebase Models
+
+These tests validate the basic CRUD operations (Create, Read, Update, Delete) for Firebase models:
+
+* Client
+* Fund
+* Portfolio
+* Asset
+* Order
+* TradeRating
+* AIForecast
+* SupportRequest
+
+**Purpose:**
+Ensure all Firebase models are correctly created, updated, retrieved, and deleted.
+
+2. Permission Tests
+
+These tests check role-based access control for API endpoints:
+
+* `fund_manager`: Allowed access to funds-related endpoints.
+* `fund_admin`: Restricted from accessing certain endpoints.
+* `Anonymous users`: Denied access (401 Unauthorized).
+
+Endpoints Tested: `/api/funds/`
+
+3. External API Tests
+
+Tests for integrations with external APIs like:
+
+* `Yahoo Finance`: Mocked responses for stock data retrieval.
+* `Alpha Vantage`: Mocked responses for time series data.
+
+`Note:` Mocking is used to avoid actual API calls.
+
+4. How to Run Tests
+
+Execute all tests with:
+```bash
+python manage.py test tests
+```
 
 ---
 
@@ -490,7 +595,7 @@ In this project, **role-based permissions** are enforced to provide secure and r
 
 ---
 
-## Role Definitions
+#### Role Definitions
 
 1. **FundAdmin**:
    - Fund Administrators can manage assets and subscriptions associated with their own funds.
@@ -503,6 +608,8 @@ In this project, **role-based permissions** are enforced to provide secure and r
 ---
 
 ### API
+
+
 
 #### ***User Registration Endpoint***
 This endpoint allows for the registration of new users with specific roles, such as Fund Administrator or Fund Manager.
@@ -1046,45 +1153,6 @@ curl -X POST http://localhost:8000/api/act-ai/predict/ \
 * **503 Service Unavailable:** Yahoo API service is down or unreachable.
 
 
-#### AI-Powered History API:
-
-The History API endpoint provides historical stock data for the specified stock symbol.
-
-**URL:** `/api/act-ai/history/`
-
-**Request Method:** `GET`
-
-**Request Parameters:**
-- `symbol`: The stock ticker symbol (e.g., `AAPL` for Apple Inc.).
-
-```bash
-curl -X GET "http://localhost:8000/api/act-ai/history/?symbol=AAPL" \
--H "Authorization: Bearer JWT_TOKEN"
-```
-
-**Example Response:**
-
-```json
-{
-    "history": [
-        {"date": "2024-12-01", "price": 205.5},
-        {"date": "2024-12-02", "price": 207.0}
-    ]
-}
-```
-
-**Response Fields:**
-
-- **`history`**: Historical stock price data.
-  - **`date`**: Date of the historical price.
-  - **`price`**: Closing price of the stock on the given date.
-
-**Error Handling:**
-
-* **401 Unauthorized:** Ensure your token is valid and included in the Authorization header.
-* **400 Bad Request:** Ensure ``symbol`` query parameter is included.
-
-
 #### AI-Powered Trade Rating Endpoint:
 
 This AI-powered endpoint provides the trade rating information for a given stock symbol. The trade rating is based on various analytics and insights related to the specified symbol.
@@ -1435,6 +1503,71 @@ A JSON array containing trending coins. Each object includes the following field
 * Ensure that the user's email is associated with a `Stripe Customer`.
 * The `current_period_end` timestamp can be converted to a human-readable date on the client side.
 
+#### Chat with Gemini AI
+
+This endpoint allows users to send a message to the Gemini AI model and receive an AI-generated response. It provides seamless integration with Google's Gemini API to enable conversational interactions.
+
+**URL:** `/api/act-ai/chat/`
+
+**Request Method:** `POST`
+
+**Request Parameters:**
+- `message` (required): The text input or question you want to send to the Gemini AI model.
+
+```bash
+curl -X POST "http://161.35.38.50:8000/api/act-ai/chat/" \
+-H "Authorization: Bearer JWT_TOKEN" \
+-H "Content-Type: application/json" \
+-d '{
+    "message": "Explain how can I make AI predict with your help in very short style"
+}'
+```
+
+**Response:**
+* `reply`: The response text generated by the Gemini AI model.
+
+**Example Response:**
+
+```json
+{
+    "reply": "1. **Define problem:** Clearly state what you want the AI to predict.\n2. **Gather data:** Collect relevant data.  More data = better predictions.\n3. **Choose model:** Select an appropriate AI model (I can help suggest one).\n4. **Train model:** Use your data to \"teach\" the model.\n5. **Evaluate & refine:** Test the model's accuracy and adjust as needed.\n6. **Make predictions:** Use the trained model to predict new outcomes.\n\n\nI can assist with steps 3 and potentially 4, given sufficient context.  Tell me your problem!\n"
+}
+```
+
+**Error Handling:**
+
+* **401 Unauthorized:** Ensure your token is valid and included in the Authorization header.
+* **400 Bad Request**: The `message` parameter is missing.
+* **503 Service Unavailable:** Server misconfiguration or issues with the Gemini API.
+* **External API Failure:** Issues with the Gemini API, such as invalid credentials or service downtime.
+    ```json
+    {
+        "error": "Failed to communicate with Gemini API",
+        "details": {
+            "error": {
+                "code": 401,
+                "message": "Request had invalid authentication credentials.",
+                "status": "UNAUTHENTICATED"
+            }
+        }
+    }
+    ```
+
+**Notes:**
+* Ensure the `GEMINI_API_KEY` is set as an environment variable in your backend configuration..
+* The endpoint integrates with the `Gemini API` endpoint:
+    ```bash
+    https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
+    ```
+* Ensure the request payload sent to `Gemini API` matches the required format:
+    ```json
+    {
+        "contents": [{
+            "parts": [{"text": "Your input message"}]
+        }]
+    }
+    ```
+
 
 ## Frontend
 
@@ -1741,114 +1874,194 @@ button:hover, .btn:hover {
 
 This code enhances user-friendliness by creating a visually cohesive, responsive design that is easy to navigate and interact with, whether on desktop or mobile.
 
-### Ai
-### crewAI - Framework for creating and managing AI agents
+## 🤖 ACT-AI-Engine
+Advanced Market Analysis & Trading Intelligence
 
-crewAI will be used to create and manage AI agents that work together to accomplish complex tasks.
+### 📊 Overview
+The ACT-AI-Engine is a sophisticated artificial intelligence system designed for advanced market analysis and trading insights. It serves as the analytical backbone of the larger trading system, providing real-time market analysis, trading recommendations, and predictive insights for both traditional stocks and cryptocurrencies.
 
-Key Features:
-- Agent Creation: Define specialized AI agents for different roles within the trading system
-- Task Management: Coordinate tasks between agents for efficient workflow
-- Communication: Enable inter-agent communication for collaborative problem-solving
-- Integration: Seamlessly integrate with other AI tools and APIs
+### ⭐ Core Features
+The engine employs a multi-agent AI architecture powered by the CrewAI framework, combining different specialized agents to perform complex market analysis tasks. Each agent has specific roles and capabilities, working together to provide comprehensive market insights.
+Key features include:
 
-### Groq API - For fast language model inference
+Real-time market data analysis
+Technical and fundamental analysis
+Trading opportunity identification
+Risk assessment and trade ratings
+Price predictions and forecasting
+Natural language chat interface for market queries
+Support for both cryptocurrency and traditional stock markets
 
-Groq API is utilized for fast inference in time-sensitive trading operations.
+### 🏗️ System Architecture
+AI Agents
+The system utilizes five specialized AI agents:
 
-Implementation:
-- Real-time Analysis: Process market data and news in real-time
-- Quick Decision Making: Generate rapid insights for trading strategies
-- Low-latency Responses: Ensure timely execution of trades
+Researcher Agent
 
-### OpenAI API - For advanced language model capabilities
-
-- OpenAI API provides advanced language model capabilities for complex analysis and decision-making at fast inference.
-- Provides entrypoint for ollama driven local models for integration with langchain & crewAI.
-
-### Integration
-
-- Integrated AI functionalities for stock prediction and historical data analysis.
-- APIs like Yahoo Finance and Alpha Vantage are used for real-time and historical market data.
+Conducts deep market research
+Analyzes technical indicators
+Identifies market patterns and trends
+Provides unique market insights
 
 
-### Docker Integration
+Accountant Agent
 
-The use of ``Docker`` became essential due to the integration of AI functionalities, which significantly increased the complexity of managing dependencies. By containerizing the application, we ensure that all dependencies — especially those related to AI models and libraries—are consistently managed and isolated across different environments.
+Calculates financial ratios
+Analyzes fundamental metrics
+Processes numerical market data
+Utilizes specialized calculator tools
 
-Managing these dependencies in a local development environment proved to be challenging due to potential conflicts with other libraries and platform-specific issues. Docker resolves these challenges by providing a consistent and isolated environment for the application.
 
-#### Docker Setup
+Recommender Agent
 
-1. Build Docker Images:
+Generates trading recommendations
+Provides buy/sell/hold signals
+Assesses market opportunities
+Evaluates risk factors
+
+
+Blogger Agent
+
+Formats analysis reports
+Creates readable market summaries
+Structures technical content
+Produces clear documentation
+
+
+Chatbot Agent
+
+Handles natural language queries
+Provides market information
+Maintains conversation context
+Offers real-time market updates
+
+
+
+Data Integration
+The engine integrates with multiple market data providers:
+
+Yahoo Finance API
+Alpha Vantage
+Finnhub
+CoinGecko (for cryptocurrency data)
+
+Core Components
+
+AiAPI: Main interface for the AI engine
+TaskManager: Orchestrates AI agent operations
+MarketData: Handles market data retrieval and processing
+DataParsers: Processes and standardizes market data
+CalculatorTool: Performs financial calculations
+ChatbotTools: Manages natural language interactions
+
+### 🔍 System Outputs
+1. Chat Interface
+The chat interface provides natural language responses with real-time market data and analysis:
+```javascript
+{
+    "message": "What's the market sentiment for Microsoft?",
+    "response": "Okay, let's take a look at the market sentiment for Microsoft (MSFT). Currently, the stock is trading at $434.25, down 0.54% for the day as of 3:19 PM ET. The day's trading range has been between $432.83 and $437.65, with a volume of 8,270,924 shares traded.\n\nAnalyst recommendations show a very positive outlook for MSFT. Over the past three months, there have been a significant number of Buy and Strong Buy ratings, with very few Sell or Strong Sell ratings. The exact numbers vary slightly depending on the specific time period, but consistently show a very strong buy consensus. For example, over the past month, there were 13 Strong Buy, 37 Buy, 5 Hold, and zero Sell or Strong Sell ratings.\n\nIt's important to remember that analyst ratings represent opinions, and it's always best to consider other factors before making investment decisions. To help me provide you with more tailored insights, could you tell me what your investment timeframe is (short-term, long-term, etc.) and what your general investment strategy is like?",
+    "user_id": 1
+}
+```
+2. Trade Ratings
+The trade rating system provides a simple binary POSITIVE/NEGATIVE assessment:
+```javascript
+{
+    "symbol": "MSFT",
+    "rating": "NEGATIVE",
+    "user_id": 1
+}
+```
+4. Market Forecasts
+The forecast system provides detailed multi-timeframe analysis and predictions:
+```javascript
+{
+    "id": "forecast_id",
+    "forecast": "Price Prediction Analysis:\n\n1. Short-term Outlook (1-5 days):\n   - Price Target Range: $430 - $440\n   - Key Support Levels: $430, $425\n   - Key Resistance Levels: $438, $440\n   - Expected Volatility: Medium\n   - Confidence Level: 4/10\n   - Primary Drivers: Recent price consolidation, low trading volume suggesting indecision, potential for short-term price fluctuations based on news and investor sentiment. Lack of technical indicators severely limits confidence.\n\n2. Medium-term Outlook (1-3 weeks):\n   - Price Target Range: $425 - $450\n   - Key Support Levels: $425, $420\n   - Key Resistance Levels: $445, $450\n   - Expected Volatility: Medium\n   - Confidence Level: 5/10\n   - Primary Drivers: Underlying strong fundamentals will provide support. However, regulatory uncertainty and potential negative impacts from insider selling could exert downward pressure.\n\n[... Additional forecast details ...]\n\nFinal Verdict:\nGiven the strong fundamental performance of Microsoft, the long-term outlook remains positive, but the short-to-medium term is characterized by uncertainty. The lack of comprehensive technical data and the prevailing regulatory risks warrant caution.",
+    "user_id": 1
+}
+```
+### 🛠️ Setup & Configuration
+Dependencies
+Core Requirements
 ```bash
-docker-compose build
+crewai==0.83.0
+crewai_tools==0.14.0
+Requests==2.32.3
 ```
-
-2. Run Containers:
+Required API Keys
+The following API keys must be configured in the environment:
 ```bash
-docker-compose up
+RAPIDAPI_KEY
+RAPIDAPI_HOST
+ALPHA_VANTAGE_API_KEY
+FINNHUB_API_KEY
+GEMINI_API_KEY
 ```
+Installation
 
-3. Access Application:
- * Backend: ``http://localhost:8000/``
- * SQLite: Used for system-level data.
- * Firebase Firestore: Configured for business logic.
+Install required packages:
 
-#### Docker Compose File
-
-This section describes the `docker-compose.yml` file used to set up and run the project backend.
-
-```yaml
-version: '3.9'
-
-services:
-  web:
-    build:
-      context: .
-    ports:
-      - "8000:8000"
-    volumes:
-      - .:/app
-      - ./config/act-corporate-trader-firebase-adminsdk-uwhis-21e99a6344.json:/app/config/firebase_credentials.json
-    env_file:
-      - .env
-    environment:
-      - DJANGO_SETTINGS_MODULE=act_backend.settings
-      - FIREBASE_CREDENTIALS_FILE=firebase_credentials.json
+```bash
+pip install -r requirements.txt
 ```
+Set up environment variables:
 
-**Explanation of Configuration:**
+```bash
+export RAPIDAPI_KEY="your_key"
+export RAPIDAPI_HOST="your_host"
+export ALPHA_VANTAGE_API_KEY="your_key"
+export FINNHUB_API_KEY="your_key"
+export GEMINI_API_KEY="your_key"
+```
+## 💻 Usage
+Basic Implementation
+```python
+from act_ai_engine import AiAPI
 
-1. ``version: '3.9'``: Specifies the Docker Compose file format version.
+# Initialize the AI engine
+ai_engine = AiAPI()
 
-2. ``services:`` Defines the services to be run in the Docker environment.
+# Get market forecast
+forecast = ai_engine.get_forecast("forecast_id", "AAPL")
 
-3. ``web`` service:
+# Get trade rating
+rating = ai_engine.get_trade_rating("AAPL")
 
-    * ``build:``
-        * ``context: .`` instructs Docker to use the current directory as the build context.
-    * ``ports:``
-        * Maps the container's port 8000 to the host's port 8000, enabling access to the Django application at ``http://localhost:8000``.
-    * ``volumes:``
-        * ``.:/app:`` Mounts the project directory from the host to /app in the container, enabling live code changes without rebuilding the container.
-        * ``./config/act-corporate-trader-firebase-adminsdk-uwhis-21e99a6344.json:/app/config/firebase_credentials.json:`` Mounts the Firebase credentials file into the container at the specified path.
-    * ``env_file:``
-        * Specifies the ``.env`` file to load additional environment variables.
-    * ``environment:``
-        * ``DJANGO_SETTINGS_MODULE:`` Specifies the Django settings module for the application.
-        * ``FIREBASE_CREDENTIALS_FILE:`` Defines the name of the Firebase credentials file within the container.
+# Process chat message
+response = ai_engine.get_chat("What's the outlook for Bitcoin?")
+```
+## Testing
+The engine includes comprehensive testing capabilities:
+```python
+# Run all tests
+ai_engine.run_all_tests()
 
-#### Notes
+# Test specific functionality
+ai_engine.test_crypto_forecast()
+ai_engine.test_stock_forecast()
+ai_engine.test_chat()
+```
+### ⚠️ Important Notes
+Error Handling
+The engine implements comprehensive error handling:
 
-* ``AI Integration:`` The AI libraries and models are managed within the container, ensuring compatibility across environments and reducing setup complexity.
-* ``Firebase Integration:`` Ensure that the Firebase Admin SDK JSON file is correctly placed in the config directory and referenced in the volumes section.
-* ``Live Code Changes:`` The volumes directive allows live code changes to reflect without rebuilding the container.
-* ``Environment Variables:`` The .env file centralizes environment-specific configuration, making the application portable across different environments.
+API connection error management
+Data validation and cleaning
+Graceful degradation when services are unavailable
+Detailed error logging and reporting
+
+Limitations
+
+API rate limits may affect real-time data availability
+Cryptocurrency data limited to major tokens
+Historical data depth varies by data provider
+Some features require premium API access
 
 
-### Product Backlog
-**Please teams, improve this content, it's only sceleton.**
+## Product Backlog
+
 
 Here's a product backlog by sprint breakdown for the "ACT (Agentic Corporate Trader)" project, aligned with the parallel development of frontend, backend, and AI.
 
@@ -1921,4 +2134,3 @@ Here's a product backlog by sprint breakdown for the "ACT (Agentic Corporate Tra
     Number of Tasks: 3
     Total Hours: 10 hours
 
-**Please teams, improve this content, it's only sceleton.**
